@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindstormLLM - Profile Builder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>body{background:#0f1117;color:#e4e7f0;font-family:-apple-system,sans-serif;}</style>
+</head>
+<body>
+
+<header>
+    <h1><span>Mindstorm</span>LLM</h1>
+    <div>
+        <span id="robotStatus" class="status-badge stopped">Stopped</span>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- Port Configuration -->
+    <div class="card">
+        <h2><span class="icon">&#9881;</span> Ports</h2>
+        <div class="ports-grid" id="portsGrid">
+            {% for port_letter in ['A', 'B', 'C', 'D', 'E', 'F'] %}
+            <div class="port-card">
+                <div class="port-label">Port {{ port_letter }}</div>
+                <select data-port="{{ port_letter }}" class="port-type">
+                    <option value="">Empty</option>
+                    <option value="motor" {% if config.ports and port_letter in config.ports and config.ports[port_letter].type == 'motor' %}selected{% endif %}>Motor</option>
+                    <option value="distance" {% if config.ports and port_letter in config.ports and config.ports[port_letter].type == 'distance' %}selected{% endif %}>Distance</option>
+                    <option value="color" {% if config.ports and port_letter in config.ports and config.ports[port_letter].type == 'color' %}selected{% endif %}>Color</option>
+                    <option value="light" {% if config.ports and port_letter in config.ports and config.ports[port_letter].type == 'light' %}selected{% endif %}>Light</option>
+                </select>
+                <input type="text" data-port="{{ port_letter }}" class="port-role"
+                       placeholder="Role..."
+                       value="{{ config.ports[port_letter].role if config.ports and port_letter in config.ports else '' }}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Driving Config -->
+    <div class="card">
+        <h2><span class="icon">&#128663;</span> Driving</h2>
+        <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
+            Select which motor ports control the wheels.
+        </p>
+        <div class="driving-grid">
+            <div class="driving-slot">
+                <label>Front left</label>
+                <select id="driveFrontLeft">
+                    <option value="">-</option>
+                    {% for p in ['A','B','C','D','E','F'] %}
+                    <option value="{{ p }}" {% if config.driving and config.driving.front_left == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="driving-slot">
+                <label>Front right</label>
+                <select id="driveFrontRight">
+                    <option value="">-</option>
+                    {% for p in ['A','B','C','D','E','F'] %}
+                    <option value="{{ p }}" {% if config.driving and config.driving.front_right == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="driving-slot">
+                <label>Rear left</label>
+                <select id="driveRearLeft">
+                    <option value="">-</option>
+                    {% for p in ['A','B','C','D','E','F'] %}
+                    <option value="{{ p }}" {% if config.driving and config.driving.rear_left == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="driving-slot">
+                <label>Rear right</label>
+                <select id="driveRearRight">
+                    <option value="">-</option>
+                    {% for p in ['A','B','C','D','E','F'] %}
+                    <option value="{{ p }}" {% if config.driving and config.driving.rear_right == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 16px;">
+            <label>Reversed motors (mounted in opposite direction)</label>
+            <div style="display: flex; gap: 16px; margin-top: 4px;">
+                {% set reversed = config.driving.reversed if config.driving and config.driving.reversed else [] %}
+                {% for p in ['A','B','C','D','E','F'] %}
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--text); cursor: pointer;">
+                    <input type="checkbox" class="reversed-port" value="{{ p }}"
+                           {% if p in reversed %}checked{% endif %}> {{ p }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 16px;">
+            <label>Max speed (deg/s)</label>
+            <div class="slider-group">
+                <input type="range" id="maxSpeed" min="100" max="1000" step="50"
+                       value="{{ config.safety.max_speed if config.safety else 500 }}">
+                <span class="slider-value" id="maxSpeedVal">{{ config.safety.max_speed if config.safety else 500 }}</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Default speed (deg/s)</label>
+            <div class="slider-group">
+                <input type="range" id="defaultSpeed" min="50" max="500" step="25"
+                       value="{{ config.safety.default_speed if config.safety else 200 }}">
+                <span class="slider-value" id="defaultSpeedVal">{{ config.safety.default_speed if config.safety else 200 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LLM Configuration -->
+    <div class="card">
+        <h2><span class="icon">&#129504;</span> LLM Brain</h2>
+        <div class="llm-toggle">
+            <button id="btnAnthropic" class="{{ 'active' if not config.llm or config.llm.provider == 'anthropic' else '' }}"
+                    onclick="setProvider('anthropic')">Anthropic (cloud)</button>
+            <button id="btnOllama" class="{{ 'active' if config.llm and config.llm.provider == 'ollama' else '' }}"
+                    onclick="setProvider('ollama')">Ollama (local)</button>
+        </div>
+
+        <div id="anthropicConfig" style="display: {{ 'block' if not config.llm or config.llm.provider == 'anthropic' else 'none' }}">
+            <div class="form-group">
+                <label>Model</label>
+                <select id="anthropicModel">
+                    <option value="claude-haiku-4-5-20251001" {% if config.llm and config.llm.model == 'claude-haiku-4-5-20251001' %}selected{% endif %}>Claude Haiku 4.5 (fast, cheap)</option>
+                    <option value="claude-sonnet-4-6" {% if config.llm and config.llm.model == 'claude-sonnet-4-6' %}selected{% endif %}>Claude Sonnet 4.6 (smarter)</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="ollamaConfig" style="display: {{ 'block' if config.llm and config.llm.provider == 'ollama' else 'none' }}">
+            <div class="form-group">
+                <label>Model</label>
+                <input type="text" id="ollamaModel" placeholder="gemma4"
+                       value="{{ config.llm.model if config.llm and config.llm.provider == 'ollama' else 'gemma4' }}">
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="text" id="ollamaUrl" placeholder="http://localhost:11434"
+                       value="{{ config.llm.url if config.llm and config.llm.get('url') else 'http://localhost:11434' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Temperature</label>
+                <div class="slider-group">
+                    <input type="range" id="llmTemp" min="0" max="1" step="0.1"
+                           value="{{ config.llm.temperature if config.llm else 0.3 }}">
+                    <span class="slider-value" id="llmTempVal">{{ config.llm.temperature if config.llm else 0.3 }}</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Max tokens</label>
+                <input type="number" id="llmMaxTokens" min="100" max="1000" step="50"
+                       value="{{ config.llm.max_tokens if config.llm else 300 }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Builder -->
+    <div class="card">
+        <h2><span class="icon">&#127919;</span> New Profile</h2>
+
+        <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
+            Choose a template or build your own from scratch.
+        </p>
+
+        <div class="template-grid">
+            <div class="template-card" onclick="loadTemplate('patrol')">
+                <div class="emoji">&#128737;</div>
+                <div class="name">Patrol</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('dog')">
+                <div class="emoji">&#128054;</div>
+                <div class="name">Dog</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('explorer')">
+                <div class="emoji">&#127758;</div>
+                <div class="name">Explorer</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('dancer')">
+                <div class="emoji">&#128131;</div>
+                <div class="name">Dancer</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('shy')">
+                <div class="emoji">&#128568;</div>
+                <div class="name">Shy</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('custom')">
+                <div class="emoji">&#9999;</div>
+                <div class="name">Custom</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Profile name</label>
+            <input type="text" id="profileName" placeholder="my_robot">
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="profileDesc" placeholder="Short description of the robot">
+        </div>
+
+        <div class="form-group">
+            <label>Personality and behavior</label>
+            <textarea id="profileBehavior" rows="6"
+                      placeholder="Describe the robot's personality and how it should behave..."></textarea>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="saveProfile()">Save profile</button>
+        </div>
+    </div>
+
+    <!-- Saved Profiles -->
+    <div class="card full-width">
+        <h2><span class="icon">&#128218;</span> Profiles</h2>
+
+        <div class="profile-list" id="profileList">
+            <!-- Built-in -->
+            <div class="profile-item">
+                <div>
+                    <div class="name">patrol</div>
+                    <div class="desc">Security patrol robot - drives around, detects obstacles, alerts</div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn btn-success btn-sm" onclick="startRobot('patrol')">Start</button>
+                </div>
+            </div>
+            <div class="profile-item">
+                <div>
+                    <div class="name">dog</div>
+                    <div class="desc">Robot puppy - playful, curious, reacts to touch and movement</div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn btn-success btn-sm" onclick="startRobot('dog')">Start</button>
+                </div>
+            </div>
+
+            <!-- Custom profiles -->
+            {% for p in profiles %}
+            <div class="profile-item" id="profile-{{ p._filename }}">
+                <div>
+                    <div class="name">{{ p.name }}</div>
+                    <div class="desc">{{ p.description }}</div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn btn-success btn-sm" onclick="startRobot('{{ p._filename }}')">Start</button>
+                    <button class="btn btn-ghost btn-sm" onclick="deleteProfile('{{ p._filename }}')">Delete</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="btn-group" id="stopGroup" style="display: none;">
+            <button class="btn btn-danger" onclick="stopRobot()">Stop robot</button>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

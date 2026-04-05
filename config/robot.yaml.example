@@ -1,0 +1,29 @@
+ports:
+  A:
+    type: motor
+    role: Left motor (driving)
+  B:
+    type: motor
+    role: Right motor (driving)
+  E:
+    type: distance
+    role: Distance sensor (front)
+
+driving:
+  front_left: A
+  front_right: B
+  # rear_left: C      # Uncomment for 4WD
+  # rear_right: D
+  # reversed: [A, C]  # Motors mounted in reverse direction
+
+safety:
+  max_speed: 500       # deg/s
+  default_speed: 200
+  min_battery_pct: 10
+
+llm:
+  provider: anthropic              # or "ollama"
+  model: claude-haiku-4-5-20251001 # or any Ollama model
+  # url: http://localhost:11434    # Only needed for Ollama
+  max_tokens: 300
+  temperature: 0.3

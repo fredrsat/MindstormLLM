@@ -1,0 +1,21 @@
+[project]
+name = "mindstorm-llm"
+version = "0.1.0"
+description = "LEGO Mindstorms 51515 robot controlled by LLM (Claude / Ollama)"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "bleak>=0.22.0",
+    "anthropic>=0.40.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "pybricksdev>=1.0.0",
+    "httpx>=0.27.0",
+    "flask>=3.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["mindstorm*"]
+
+[project.scripts]
+mindstorm = "mindstorm.__main__:main"
