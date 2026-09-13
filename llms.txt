@@ -1,0 +1,32 @@
+# MindstormLLM
+
+> LEGO Mindstorms 51515 (Robot Inventor) controlled by an LLM (Claude or local Ollama) over Bluetooth Low Energy, running a sense-think-act loop.
+
+A Python host (macOS/Linux) talks to the LEGO hub over BLE UART using compact JSON: the hub (running Pybricks firmware and a MicroPython agent) streams sensor data (IMU, motors, distance, color, battery), the LLM decides what to do, and motor/display/sound commands are sent back. An independent 10Hz safety loop overrides the LLM on obstacles, plus battery cutoff, shake-to-stop, and a 5s heartbeat timeout on the hub.
+
+Robot behaviors are defined as profiles: built-in (`patrol`, `dog`), YAML profiles in `config/profiles/`, or Python classes inheriting `BaseProfile`. Hardware (ports, driving config, safety limits, LLM provider) is configured in `config/robot.yaml` or via a Flask web UI ("Profile Builder") on port 8080. Requires Python 3.11+, Pybricks v3.6.1 firmware, and either an Anthropic API key or local Ollama.
+
+## Docs
+
+- [README.md](https://github.com/fredrsat/MindstormLLM/blob/main/README.md): architecture diagram, hardware, firmware flashing, installation, usage (CLI + web UI), configuration, profiles, BLE JSON protocol, safety
+- [config/robot.yaml.example](https://github.com/fredrsat/MindstormLLM/blob/main/config/robot.yaml.example): example hardware/LLM configuration
+
+## Source
+
+- [mindstorm/__main__.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/__main__.py): CLI entry point (scan, run, profiles)
+- [mindstorm/config.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/config.py): YAML configuration (ports, driving, LLM)
+- [mindstorm/loop/controller.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/loop/controller.py): main loop combining sensors, brain, and safety
+- [mindstorm/brain/client.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/brain/client.py): LLM clients (Anthropic + Ollama)
+- [mindstorm/brain/reasoning.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/brain/reasoning.py): sense -> LLM -> commands pipeline
+- [mindstorm/hub/commands.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/hub/commands.py): command definitions (motor, display, sound)
+- [mindstorm/hub/state.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/hub/state.py): hub state model (sensors, IMU, battery)
+- [mindstorm/profiles/base.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/profiles/base.py): abstract base profile
+- [mindstorm/profiles/registry.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/profiles/registry.py): profile registry (built-in + YAML)
+- [hub_scripts/agent.py](https://github.com/fredrsat/MindstormLLM/blob/main/hub_scripts/agent.py): MicroPython agent running on the hub
+
+## Optional
+
+- [web/app.py](https://github.com/fredrsat/MindstormLLM/blob/main/web/app.py): Flask web server and API for the Profile Builder
+- [mindstorm/ble/scanner.py](https://github.com/fredrsat/MindstormLLM/blob/main/mindstorm/ble/scanner.py): BLE scanning for Pybricks hubs
+- [pyproject.toml](https://github.com/fredrsat/MindstormLLM/blob/main/pyproject.toml): dependencies and CLI script entry
+- [LICENSE](https://github.com/fredrsat/MindstormLLM/blob/main/LICENSE): MIT license
