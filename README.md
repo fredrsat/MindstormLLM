@@ -15,7 +15,7 @@ Includes a visual **Profile Builder** (web UI) for configuration and profile cre
 │              │  Sensor data       │               │            │ Ollama      │
 │  agent.py    │                    │  controller   │            │             │
 │  MicroPython │                    │  brain/reason │            │  JSON cmds  │
-└──────────────┘                    └───┬──────────��┘            └─────────────┘
+└──────────────┘                    └───┬───────────┘            └─────────────┘
                                         │
                                    ┌────▼────────┐
                                    │  Web UI     │
